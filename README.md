@@ -1,2 +1,2 @@
 # Scripts-SUPPA
-Repository of the srcipts that we used on SUPPA's software
+Scipts repository that we used on SUPPA's software
