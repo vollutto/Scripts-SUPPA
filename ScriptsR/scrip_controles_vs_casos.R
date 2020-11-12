@@ -5,7 +5,7 @@ a = 0.95
 
 #CASOS
 
-casos <- read.delim("~/Desktop/MN4/Resultados/Resultados/casos_events.psi", header = TRUE, sep = "\t")
+casos <- read.delim("~/Desktop/MN4/Resultados/Resultados/casos_events.psi", header = TRUE, sep = "\t", row.names = 1)
 head(casos)
 dim(casos)
 
@@ -13,12 +13,12 @@ casos_up = as.data.frame(rowSums(casos > a, na.rm = TRUE)) #Contar cuantas muest
 casos_down = as.data.frame(rowSums(casos < a, na.rm = TRUE)) #Contar cuantas muestras están por debajo de 0.85 en cada evento
 casos_nan = as.data.frame(rowSums(casos == "NaN")) #Contar cuantos nan y na hay por cada evento
 
-psitable <- cbind(casos$Event_ID, casos_up, casos_down, casos_nan) #Guardar los datos en una nueva tabla 
+psitable <- cbind(casos_up, casos_down, casos_nan) #Guardar los datos en una nueva tabla 
 psi <- cbind(casos_up, casos_down)
 
 #CONTROLES
 
-controles <- read.delim("~/Desktop/MN4/Resultados/Resultados/controles_events.psi", header = TRUE, sep = "\t")
+controles <- read.delim("~/Desktop/MN4/Resultados/Resultados/controles_events.psi", header = TRUE, sep = "\t", row.names = 1)
 head(controles)
 dim(controles)
 
@@ -29,7 +29,12 @@ controles_nan = as.data.frame(rowSums(controles == "NaN")) #Contar cuantos nan y
 psitable  <- cbind(psitable, controles_up, controles_down, controles_nan) #Guardar las tres nuevas columnas en la tabla de los casos
 psi <- cbind(psi, controles_up, controles_down)
 
-colnames(psitable) <- c("Event_ID", "casos_up", "casos_down", "casos=nan", "controles_up", "controles_down", "controles=nan") #Cambiar los nombres a las columnas
+#Extraer del data frame los índices de las filas y quedarse solamente con el tipo de evento, unirlo en una columna nueva al daata frame y ordenar las columnas
+eventid <- sub(".*;", "", rownames(psitable)) #; psitable$gene <- sub(";.*", "", rownames(psitable)) En este caso si queremos crear una columna con los id de los genes
+psitable$event <- sub(":.*", "", eventid)
+psitable <- psitable[ , c(7, 1, 2, 3, 4, 5, 6)] #Ordenamos las columnas para que el evento esté en la segunda columna
+
+colnames(psitable) <- c("Event", "casos_up", "casos_down", "casos=nan", "controles_up", "controles_down", "controles=nan") #Cambiar los nombres a las columnas
 colnames(psi) <- c("casos>0.85", "casos<0.85", "controles>0.85", "controles<0.85")
 
 #Calcular el p-valor para cada fila sin tener en cuenta los "NaN"
@@ -66,19 +71,12 @@ View(d) #Visualizar la tabla con solo los eventos significativos
 dpsi_0.99 <- psitable[psitable$pval.adjust < 0.05, ] #Threshold de 0.99
 View(dpsi_0.99)
 
-#Crear una columna con el evento
-
-psitable$d <- sub(".*;", "", psitable$Event_ID) #; psitable$gene <- sub(";.*", "", psitable$Event_ID) En este caso si queremos crear una columna con los id de los genes
-psitable$event <- sub(":.*", "", psitable$d) #Creamos una columna con solo el evento  
-psitable <- psitable[, -10] #eliminamos la columna "d" y así solo nos quedamos con la del evento
-psitable <- psitable[ , c(1,10,2,3,4,5,6,7,8,9)] #Ordenamos las columnas para que el evento está en la segunda columna
-
 #Guardar la tabla en un fichero
 
 write.table(psitable, file = "~/Desktop/MN4/Resultados/Resultados/casos_vs_controles_vs_na_0.95.txt", sep = "\t", col.names = TRUE, row.names = TRUE)
 write.table(psi, file = "~/Desktop/MN4/Resultados/casos_vs_controles.txt", sep = "\t", col.names = TRUE, row.names = TRUE)
 
-###########################HIPERGEOMETRÍA##############################################
+#########################################################HIPERGEOMETRÍA##################################################################
 
 m <- NULL #Variable para todo el número de casos con un PSI mayor del threshold
 n <- NULL #Variable para todo el número de controles con un PSI mayor del threshold
@@ -105,7 +103,7 @@ for (e in ev_names){
 
 #Crear una tabla (data frame) para el método phyper con todas las variables 
 phy <- data.frame(
-  "event" = c("SE", "MX", "A5", "A3", "RI", "AF", "AL"), 
+  "event" = ev_names, 
   "m" = rep(m, 7), 
   "n" = rep(n, 7),
   "k" = c(kSE, kMX, kA5, kA3, kRI, kAF, kAL),
